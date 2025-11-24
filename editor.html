@@ -222,6 +222,16 @@
             document.getElementById("fileName").addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') downloadCode();
             });
+
+            // 快捷鍵：Ctrl + Shift + D 切換模式
+            document.addEventListener('keydown', function(e) {
+                // 使用 e.code 檢查實際按鍵（KeyD），並搭配 ctrlKey 與 shiftKey
+                if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
+                    e.preventDefault();
+                    toggleMode();
+                }
+            });
+
             updatePreview();
         });
     </script>
