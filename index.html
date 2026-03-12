@@ -1,97 +1,82 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>極光之旅 - 團隊請假看板</title>
+    <title>Aurora Tour - Team Calendar</title>
     
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
     <style>
         :root { --primary: #6366f1; --bg: #f8fafc; }
-        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; display: flex; margin: 0; background: var(--bg); height: 100vh; overflow: hidden; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex; margin: 0; background: var(--bg); height: 100vh; overflow: hidden; }
         
-        /* 側邊欄樣式 */
-        #sidebar { width: 260px; background: white; padding: 25px; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,0.02); }
-        .status-tag { font-size: 12px; color: #10b981; background: #dcfce7; padding: 6px 12px; border-radius: 20px; text-align: center; margin-bottom: 20px; font-weight: bold; }
+        #sidebar { width: 240px; background: white; padding: 20px; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; flex-shrink: 0; }
+        .user-tag { font-size: 13px; color: #4f46e5; background: #eef2ff; padding: 8px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; text-align: center; border: 1px solid #c7d2fe; }
+        .admin-badge { background: #ef4444; color: white; font-size: 10px; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
         
-        h4 { margin: 15px 0 10px; color: #334155; font-size: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
-        .fc-event { margin: 8px 0; padding: 12px; cursor: grab; border-radius: 8px; color: white; text-align: center; font-weight: bold; border: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); transition: transform 0.1s; font-size: 14px; }
-        .fc-event:active { transform: scale(0.95); }
+        h4 { margin: 10px 0 8px; color: #334155; font-size: 14px; border-bottom: 2px solid #f1f5f9; padding-bottom: 5px; }
         
-        /* 月曆區樣式 */
-        #calendar-container { flex-grow: 1; padding: 25px; overflow-y: auto; }
-        #calendar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border: 1px solid #f1f5f9; }
-        
-        /* 🌌 極光密碼遮罩 (關鍵修正：載入同目錄下的圖片) */
+        .fc-event { 
+            margin: 2px 0 !important; padding: 5px !important; cursor: grab; border-radius: 5px; 
+            color: white; text-align: center; font-weight: bold; border: 1px solid rgba(255,255,255,0.2) !important; 
+            font-size: 12px; opacity: 0.85; box-shadow: 0 3px 6px rgba(0,0,0,0.1); transition: 0.2s;
+        }
+
+        #calendar-container { flex-grow: 1; padding: 15px; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; }
+        #calendar { background: white; padding: 10px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.06); flex-grow: 1; overflow: hidden; }
+
         #auth-overlay { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background-color: #000; /* 預設黑色底色 */
-            
-            /* 【核心修正】這裡直接指向同目錄下的圖片檔名 */
-            background-image: url('aurora.png'); 
-            
-            background-size: cover;       /* 自動縮放填滿幕 */
-            background-position: center;  /* 圖片對齊中心 */
-            background-repeat: no-repeat;
-            
-            z-index: 9999; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            color: white; 
-            flex-direction: column;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #000 url('aurora.png') no-repeat center center; background-size: cover;
+            z-index: 9999; display: flex; justify-content: center; align-items: center; color: white;
         }
 
-        /* 標題與文字效果 */
-        #auth-overlay h2 { 
-            font-size: 48px; font-weight: 800; letter-spacing: 8px; margin-bottom: 10px;
-            text-shadow: 0 0 20px rgba(0,255,255,0.6), 0 0 40px rgba(0,0,0,0.8);
+        .login-box { 
+            background: rgba(0, 0, 0, 0.55); 
+            padding: 20px 30px; 
+            border-radius: 15px; 
+            backdrop-filter: blur(15px); 
+            text-align: center; 
+            border: 1px solid rgba(255,255,255,0.15); 
+            width: 220px; 
+            transform: translateY(180px); 
         }
+        
+        .login-box h2 { font-size: 22px; letter-spacing: 2px; margin-bottom: 15px; }
+        .login-box input { display: block; width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: none; text-align: center; font-size: 14px; outline: none; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 10px; border-radius: 8px; border: none; background: #4f46e5; color: white; cursor: pointer; font-weight: bold; font-size: 14px; margin-bottom: 15px;}
 
-        /* 玻璃感輸入框 */
-        #pwd-input { 
-            padding: 15px; border-radius: 50px; 
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            width: 280px; text-align: center; font-size: 20px; margin-top: 20px; 
-            outline: none; background: rgba(255, 255, 255, 0.15); color: white;
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-        #pwd-input::placeholder { color: rgba(255, 255, 255, 0.6); }
+        .obs-links { border-top: 1px solid rgba(255,255,255,0.2); padding-top: 12px; margin-top: 5px; }
+        .obs-links a { color: #818cf8; text-decoration: none; font-size: 11px; display: inline-block; margin: 0 8px; }
     </style>
 </head>
 <body>
 
 <div id="auth-overlay">
-    <h2>🌌 極光之旅</h2>
-    <input type="password" id="pwd-input" placeholder="請輸入存取密碼" onkeypress="checkEnter(event)">
+    <div class="login-box">
+        <h2>Aurora Tour</h2>
+        <input type="text" id="login-user" placeholder="Name (e.g., Amy)">
+        <input type="password" id="login-pwd" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p id="login-msg" style="font-size: 11px; color: #ff8a8a; margin-top: -10px; margin-bottom: 10px; height: 12px;"></p>
+        
+        <div class="obs-links">
+            <a href="https://www.google.com/maps?q=Yellowknife,NT,Canada" target="_blank">📍 Yellowknife</a>
+            <a href="https://auroramax.com/live" target="_blank">🎬 AuroraMax</a>
+        </div>
+    </div>
 </div>
 
 <div id="sidebar">
-    <div class="status-tag">● 雲端同步中</div>
-    
-    <h4>👤 成員名單</h4>
-    <div class='fc-event' style="background:#3b82f6" data-event='{"title": "Castillo-請假", "color": "#3b82f6"}'>Castillo</div>
-    <div class='fc-event' style="background:#10b981" data-event='{"title": "Chris-請假", "color": "#10b981"}'>Chris</div>
-    <div class='fc-event' style="background:#f59e0b" data-event='{"title": "Alex-請假", "color": "#f59e0b"}'>Alex</div>
-    <div class='fc-event' style="background:#ef4444" data-event='{"title": "PJ-請假", "color": "#ef4444"}'>PJ</div>
-    <div class='fc-event' style="background:#8b5cf6" data-event='{"title": "YC-請假", "color": "#8b5cf6"}'>YC</div>
-    <div class='fc-event' style="background:#06b6d4" data-event='{"title": "James-請假", "color": "#06b6d4"}'>James</div>
-
-    <div style="margin-top: auto; font-size: 12px; color: #64748b; line-height: 1.6; background: #f8fafc; padding: 10px; border-radius: 6px;">
-        💡 <b>操作指南：</b><br>
-        • 將色塊拉進日期即新增。<br>
-        • 點擊標籤即可刪除紀錄。<br>
-        • 拖動標籤邊緣增減天數。
-    </div>
+    <div id="user-display" class="user-tag">Not Logged In</div>
+    <div id="admin-tools" style="display:none;"><h4 style="color:#ef4444;">🛠️ ADMIN Mode</h4></div>
+    <h4>👤 My Profile</h4>
+    <div id="my-event-zone"></div>
+    <button onclick="logout()" style="margin-top:auto; padding: 10px; border: none; background: #fee2e2; color: #991b1b; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 12px;">Logout</button>
 </div>
 
 <div id="calendar-container">
@@ -99,39 +84,70 @@
 </div>
 
 <script>
-    // --- 1. 密碼驗證 ---
-    function checkEnter(e) {
-        if (e.key === 'Enter') {
-            const input = document.getElementById('pwd-input').value;
-            // 預設密碼仍為你所設定的
-            if (input === "2026##") { 
-                document.getElementById('auth-overlay').style.display = 'none';
-            } else {
-                alert("密碼不正確，請重新輸入！");
-                document.getElementById('pwd-input').value = "";
-            }
-        }
-    }
-
-    // --- 2. Firebase 初始化 (填入你的配置) ---
     const firebaseConfig = {
         apiKey: "AIzaSyCepC55CSnUYH7kL0YPqMu3i-bG76IOMXo",
         authDomain: "staff-7951e.firebaseapp.com",
         databaseURL: "https://staff-7951e-default-rtdb.firebaseio.com",
         projectId: "staff-7951e",
-        storageBucket: "staff-7951e.firebasestorage.app",
-        messagingSenderId: "372090977076",
         appId: "1:372090977076:web:ba7a04005db12942e90361"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref('leave_records');
+    const auth = firebase.auth();
 
-    // --- 3. 月曆初始化 ---
-    document.addEventListener('DOMContentLoaded', function() {
+    // 帳號名單與顏色定義
+    const team = {
+        "admin@test.com": { name: "Admin", color: "#2d3436", isAdmin: true },
+        "castillo@test.com": { name: "Castillo", color: "#3b82f6" },
+        "chris@test.com": { name: "Chris", color: "#10b981" },
+        "alex@test.com": { name: "Alex", color: "#f59e0b" },
+        "pj@test.com": { name: "PJ", color: "#ef4444" },
+        "yc@test.com": { name: "YC", color: "#8b5cf6" },
+        "james@test.com": { name: "James", color: "#06b6d4" },
+        "amy@test.com": { name: "Amy", color: "#d946ef" } // Amy 設定完畢
+    };
+
+    let currentUserData = null;
+
+    function addOneDay(dateStr) {
+        let d = new Date(dateStr);
+        d.setDate(d.getDate() + 1);
+        return d.toISOString().split('T')[0];
+    }
+
+    function login() {
+        let userPart = document.getElementById('login-user').value.trim().toLowerCase();
+        if (!userPart) return;
+        const fullEmail = userPart.includes('@') ? userPart : `${userPart}@test.com`;
+        const pass = document.getElementById('login-pwd').value;
+        auth.signInWithEmailAndPassword(fullEmail, pass).catch(err => {
+            document.getElementById('login-msg').innerText = "Login Failed";
+        });
+    }
+
+    function logout() { auth.signOut().then(() => location.reload()); }
+
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            const userEmail = user.email.toLowerCase();
+            currentUserData = team[userEmail];
+            if (!currentUserData) { logout(); return; }
+            document.getElementById('auth-overlay').style.display = 'none';
+            document.getElementById('user-display').innerHTML = `👤 ${currentUserData.name}${currentUserData.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}`;
+            if (currentUserData.isAdmin) document.getElementById('admin-tools').style.display = 'block';
+            document.getElementById('my-event-zone').innerHTML = `
+                <div class='fc-event' style="background:${currentUserData.color}" 
+                     data-event='{"title": "${currentUserData.name}", "color": "${currentUserData.color}"}'>
+                     ${currentUserData.name} (Drag)
+                </div>`;
+            initCalendar();
+        }
+    });
+
+    function initCalendar() {
         const calendarEl = document.getElementById('calendar');
-        
-        new FullCalendar.Draggable(document.getElementById('sidebar'), {
+        new FullCalendar.Draggable(document.getElementById('my-event-zone'), {
             itemSelector: '.fc-event',
             eventData: function(eventEl) {
                 const data = JSON.parse(eventEl.getAttribute('data-event'));
@@ -141,39 +157,60 @@
 
         const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            locale: 'zh-tw',
+            locale: 'en',
             editable: true,
             droppable: true,
-            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' },
+            headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+            height: 'parent',
+            dayMaxEventRows: false, 
 
-            // 新增事件至 Firebase
             eventReceive: function(info) {
+                const note = prompt("Please enter hours or remark (e.g., 1hr or Vacation):", "Full Day");
+                if (note === null) { info.event.remove(); return; }
+                const finalTitle = `${currentUserData.name} (${note})`;
                 const newId = "ID_" + Date.now();
+                
+                let end = info.event.endStr || addOneDay(info.event.startStr);
+
                 db.child(newId).set({
                     id: newId,
-                    title: info.event.title,
+                    ownerUid: auth.currentUser.uid,
+                    title: finalTitle,
                     start: info.event.startStr,
-                    end: info.event.endStr || info.event.startStr,
+                    end: end,
                     color: info.event.backgroundColor
                 });
                 info.event.remove(); 
             },
 
-            // 更新事件
-            eventDrop: updateEvent,
-            eventResize: updateEvent,
+            // 這裡確保了只有 ownerUid 相符或是 Admin 才能操作 (PJ, YC, Amy 邏輯一致)
+            eventDrop: function(info) {
+                if (currentUserData.isAdmin || info.event.extendedProps.ownerUid === auth.currentUser.uid) {
+                    syncFirebase(info.event);
+                } else {
+                    alert("Permission Denied: You can only edit your own events.");
+                    info.revert();
+                }
+            },
 
-            // 刪除事件
+            eventResize: function(info) {
+                if (currentUserData.isAdmin || info.event.extendedProps.ownerUid === auth.currentUser.uid) {
+                    syncFirebase(info.event);
+                } else {
+                    alert("Permission Denied: You can only edit your own events.");
+                    info.revert();
+                }
+            },
+
             eventClick: function(info) {
-                if (confirm(`確定刪除「${info.event.title}」？`)) {
-                    db.child(info.event.id).remove();
+                if (currentUserData.isAdmin || info.event.extendedProps.ownerUid === auth.currentUser.uid) {
+                    if (confirm(`Delete this record?`)) db.child(info.event.id).remove();
                 }
             }
         });
 
         calendar.render();
 
-        // 監聽雲端數據
         db.on('value', (snapshot) => {
             const data = snapshot.val();
             calendar.removeAllEvents();
@@ -185,19 +222,24 @@
                         start: evt.start,
                         end: evt.end,
                         backgroundColor: evt.color,
-                        borderColor: evt.color
+                        borderColor: evt.color,
+                        extendedProps: { ownerUid: evt.ownerUid }
                     });
                 });
             }
         });
 
-        function updateEvent(info) {
-            db.child(info.event.id).update({
-                start: info.event.startStr,
-                end: info.event.endStr || info.event.startStr
+        function syncFirebase(event) {
+            let endStr = event.endStr;
+            if (!endStr || endStr === event.startStr) {
+                endStr = addOneDay(event.startStr);
+            }
+            db.child(event.id).update({
+                start: event.startStr,
+                end: endStr
             });
         }
-    });
+    }
 </script>
 </body>
 </html>
