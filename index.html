@@ -52,6 +52,42 @@
 
         .obs-links { border-top: 1px solid rgba(255,255,255,0.2); padding-top: 12px; margin-top: 5px; }
         .obs-links a { color: #818cf8; text-decoration: none; font-size: 11px; display: inline-block; margin: 0 8px; }
+
+        /* ── 六日底色 ─────────────────────────────────────────── */
+        /* Saturday */
+        .fc .fc-day-sat { background-color: rgba(99, 102, 241, 0.06) !important; }
+        /* Sunday */
+        .fc .fc-day-sun { background-color: rgba(239, 68, 68, 0.07) !important; }
+
+        /* 六日欄位標題顏色 */
+        .fc .fc-col-header-cell.fc-day-sat a { color: #4f46e5 !important; font-weight: 700; }
+        .fc .fc-col-header-cell.fc-day-sun a { color: #dc2626 !important; font-weight: 700; }
+
+        /* 國定假日 background event 標籤 */
+        .fc-bg-event { opacity: 0.18 !important; }
+
+        /* 假日標籤 */
+        .holiday-label {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            right: 4px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #991b1b;
+            pointer-events: none;
+            line-height: 1.3;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: 0.02em;
+            text-shadow: 0 1px 3px rgba(255,255,255,0.95), 0 0 6px rgba(255,255,255,0.6);
+        }
+
+        /* Legend in sidebar */
+        .legend-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #64748b; margin: 4px 0; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -76,6 +112,13 @@
     <div id="admin-tools" style="display:none;"><h4 style="color:#ef4444;">🛠️ ADMIN Mode</h4></div>
     <h4>👤 My Profile</h4>
     <div id="my-event-zone"></div>
+
+    <!-- 圖例 -->
+    <h4 style="margin-top: 16px;">📅 Legend</h4>
+    <div class="legend-row"><div class="legend-dot" style="background:rgba(99,102,241,0.25);"></div> Saturday</div>
+    <div class="legend-row"><div class="legend-dot" style="background:rgba(239,68,68,0.25);"></div> Sunday</div>
+    <div class="legend-row"><div class="legend-dot" style="background:#fca5a5;"></div> 國定假日</div>
+
     <button onclick="logout()" style="margin-top:auto; padding: 10px; border: none; background: #fee2e2; color: #991b1b; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 12px;">Logout</button>
 </div>
 
@@ -96,17 +139,78 @@
     const db = firebase.database().ref('leave_records');
     const auth = firebase.auth();
 
-    // 帳號名單與顏色定義
     const team = {
-        "admin@test.com": { name: "Admin", color: "#2d3436", isAdmin: true },
+        "admin@test.com":    { name: "Admin",    color: "#2d3436", isAdmin: true },
         "castillo@test.com": { name: "Castillo", color: "#3b82f6" },
-        "chris@test.com": { name: "Chris", color: "#10b981" },
-        "alex@test.com": { name: "Alex", color: "#f59e0b" },
-        "pj@test.com": { name: "PJ", color: "#ef4444" },
-        "yc@test.com": { name: "YC", color: "#8b5cf6" },
-        "james@test.com": { name: "James", color: "#06b6d4" },
-        "amy@test.com": { name: "Amy", color: "#d946ef" } // Amy 設定完畢
+        "chris@test.com":    { name: "Chris",    color: "#10b981" },
+        "alex@test.com":     { name: "Alex",     color: "#f59e0b" },
+        "pj@test.com":       { name: "PJ",       color: "#ef4444" },
+        "yc@test.com":       { name: "YC",       color: "#8b5cf6" },
+        "james@test.com":    { name: "James",    color: "#06b6d4" },
+        "amy@test.com":      { name: "Amy",      color: "#d946ef" }
     };
+
+    // ── 台灣國定假日 2025–2026（依人事行政總處修正版） ─────────
+    // FullCalendar end 為「不含」的隔日
+    const TW_HOLIDAYS = [
+        // ── 2025（114年，修正版） ────────────────────────────────
+        { title: "元旦",           start: "2025-01-01", end: "2025-01-02" },
+        // 春節：1/27除夕前一日(彈性放假)～2/2，補班2/8
+        { title: "除夕前一日",     start: "2025-01-27", end: "2025-01-28" },
+        { title: "除夕",           start: "2025-01-28", end: "2025-01-29" },
+        { title: "春節 初一",      start: "2025-01-29", end: "2025-01-30" },
+        { title: "春節 初二",      start: "2025-01-30", end: "2025-01-31" },
+        { title: "春節 初三",      start: "2025-01-31", end: "2025-02-01" },
+        { title: "和平紀念日",     start: "2025-02-28", end: "2025-03-01" },
+        { title: "兒童節 補假",    start: "2025-04-03", end: "2025-04-04" },
+        { title: "兒童節・清明節", start: "2025-04-04", end: "2025-04-05" },
+        { title: "勞動節",         start: "2025-05-01", end: "2025-05-02" },
+        { title: "端午節 補假",    start: "2025-05-30", end: "2025-05-31" },
+        { title: "端午節",         start: "2025-05-31", end: "2025-06-01" },
+        { title: "教師節",         start: "2025-09-28", end: "2025-09-29" },
+        { title: "教師節 補假",    start: "2025-09-29", end: "2025-09-30" },
+        { title: "中秋節",         start: "2025-10-06", end: "2025-10-07" },
+        { title: "國慶日",         start: "2025-10-10", end: "2025-10-11" },
+        { title: "光復節 補假",    start: "2025-10-24", end: "2025-10-25" },
+        { title: "臺灣光復節",     start: "2025-10-25", end: "2025-10-26" },
+        { title: "行憲紀念日",     start: "2025-12-25", end: "2025-12-26" },
+
+        // ── 2026（115年） ────────────────────────────────────────
+        { title: "元旦",           start: "2026-01-01", end: "2026-01-02" },
+        // 春節：2/14(六例假)～2/22(日例假)，無補班
+        { title: "小年夜",         start: "2026-02-15", end: "2026-02-16" },
+        { title: "除夕",           start: "2026-02-16", end: "2026-02-17" },
+        { title: "春節 初一",      start: "2026-02-17", end: "2026-02-18" },
+        { title: "春節 初二",      start: "2026-02-18", end: "2026-02-19" },
+        { title: "春節 初三",      start: "2026-02-19", end: "2026-02-20" },
+        { title: "小年夜 補假",    start: "2026-02-20", end: "2026-02-21" },
+        { title: "和平紀念日 補假",start: "2026-02-27", end: "2026-02-28" },
+        { title: "和平紀念日",     start: "2026-02-28", end: "2026-03-01" },
+        { title: "兒童節 補假",    start: "2026-04-03", end: "2026-04-04" },
+        { title: "兒童節",         start: "2026-04-04", end: "2026-04-05" },
+        { title: "清明節",         start: "2026-04-05", end: "2026-04-06" },
+        { title: "清明節 補假",    start: "2026-04-06", end: "2026-04-07" },
+        { title: "勞動節",         start: "2026-05-01", end: "2026-05-02" },
+        { title: "端午節",         start: "2026-06-19", end: "2026-06-20" },
+        { title: "中秋節",         start: "2026-09-25", end: "2026-09-26" },
+        { title: "教師節",         start: "2026-09-28", end: "2026-09-29" },
+        { title: "國慶日 補假",    start: "2026-10-09", end: "2026-10-10" },
+        { title: "國慶日",         start: "2026-10-10", end: "2026-10-11" },
+        { title: "臺灣光復節",     start: "2026-10-25", end: "2026-10-26" },
+        { title: "光復節 補假",    start: "2026-10-26", end: "2026-10-27" },
+        { title: "行憲紀念日",     start: "2026-12-25", end: "2026-12-26" },
+    ];
+
+    // 轉換為 FullCalendar background events
+    const holidayEvents = TW_HOLIDAYS.map(h => ({
+        title: h.title,
+        start: h.start,
+        end:   h.end,
+        display: 'background',
+        backgroundColor: '#fca5a5',
+        classNames: ['holiday-bg'],
+        extendedProps: { isHoliday: true, holidayName: h.title }
+    }));
 
     let currentUserData = null;
 
@@ -121,7 +225,7 @@
         if (!userPart) return;
         const fullEmail = userPart.includes('@') ? userPart : `${userPart}@test.com`;
         const pass = document.getElementById('login-pwd').value;
-        auth.signInWithEmailAndPassword(fullEmail, pass).catch(err => {
+        auth.signInWithEmailAndPassword(fullEmail, pass).catch(() => {
             document.getElementById('login-msg').innerText = "Login Failed";
         });
     }
@@ -134,7 +238,8 @@
             currentUserData = team[userEmail];
             if (!currentUserData) { logout(); return; }
             document.getElementById('auth-overlay').style.display = 'none';
-            document.getElementById('user-display').innerHTML = `👤 ${currentUserData.name}${currentUserData.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}`;
+            document.getElementById('user-display').innerHTML =
+                `👤 ${currentUserData.name}${currentUserData.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}`;
             if (currentUserData.isAdmin) document.getElementById('admin-tools').style.display = 'block';
             document.getElementById('my-event-zone').innerHTML = `
                 <div class='fc-event' style="background:${currentUserData.color}" 
@@ -157,21 +262,40 @@
 
         const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            locale: 'en',
+            locale: 'zh-tw',
             editable: true,
             droppable: true,
             headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
             height: 'parent',
-            dayMaxEventRows: false, 
+            dayMaxEventRows: false,
+
+            // ── 國定假日背景事件注入 ────────────────────────────
+            events: holidayEvents,
+
+            // ── 在日期格子上疊加假日名稱標籤（用本地時間，避免 UTC+8 片移）
+            dayCellDidMount: function(info) {
+                const d = info.date;
+                const dateStr = d.getFullYear() + '-'
+                    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+                    + String(d.getDate()).padStart(2, '0');
+                const matched = TW_HOLIDAYS.filter(h => h.start === dateStr);
+                if (matched.length > 0) {
+                    const label = document.createElement('div');
+                    label.className = 'holiday-label';
+                    label.textContent = matched.map(h => h.title).join('・');
+                    info.el.style.position = 'relative';
+                    info.el.appendChild(label);
+                }
+            },
 
             eventReceive: function(info) {
+                // 忽略假日 background event 的 receive
+                if (info.event.extendedProps.isHoliday) { info.event.remove(); return; }
                 const note = prompt("Please enter hours or remark (e.g., 1hr or Vacation):", "Full Day");
                 if (note === null) { info.event.remove(); return; }
                 const finalTitle = `${currentUserData.name} (${note})`;
                 const newId = "ID_" + Date.now();
-                
                 let end = info.event.endStr || addOneDay(info.event.startStr);
-
                 db.child(newId).set({
                     id: newId,
                     ownerUid: auth.currentUser.uid,
@@ -180,11 +304,11 @@
                     end: end,
                     color: info.event.backgroundColor
                 });
-                info.event.remove(); 
+                info.event.remove();
             },
 
-            // 這裡確保了只有 ownerUid 相符或是 Admin 才能操作 (PJ, YC, Amy 邏輯一致)
             eventDrop: function(info) {
+                if (info.event.extendedProps.isHoliday) { info.revert(); return; }
                 if (currentUserData.isAdmin || info.event.extendedProps.ownerUid === auth.currentUser.uid) {
                     syncFirebase(info.event);
                 } else {
@@ -194,6 +318,7 @@
             },
 
             eventResize: function(info) {
+                if (info.event.extendedProps.isHoliday) { info.revert(); return; }
                 if (currentUserData.isAdmin || info.event.extendedProps.ownerUid === auth.currentUser.uid) {
                     syncFirebase(info.event);
                 } else {
@@ -203,6 +328,7 @@
             },
 
             eventClick: function(info) {
+                if (info.event.extendedProps.isHoliday) return; // 假日不可刪
                 if (currentUserData.isAdmin || info.event.extendedProps.ownerUid === auth.currentUser.uid) {
                     if (confirm(`Delete this record?`)) db.child(info.event.id).remove();
                 }
@@ -211,9 +337,13 @@
 
         calendar.render();
 
+        // Firebase 即時同步（只處理非假日的 leave 記錄）
         db.on('value', (snapshot) => {
             const data = snapshot.val();
-            calendar.removeAllEvents();
+            // 先移除所有 leave events，保留假日 background events
+            calendar.getEvents().forEach(evt => {
+                if (!evt.extendedProps.isHoliday) evt.remove();
+            });
             if (data) {
                 Object.values(data).forEach(evt => {
                     calendar.addEvent({
@@ -231,13 +361,8 @@
 
         function syncFirebase(event) {
             let endStr = event.endStr;
-            if (!endStr || endStr === event.startStr) {
-                endStr = addOneDay(event.startStr);
-            }
-            db.child(event.id).update({
-                start: event.startStr,
-                end: endStr
-            });
+            if (!endStr || endStr === event.startStr) endStr = addOneDay(event.startStr);
+            db.child(event.id).update({ start: event.startStr, end: endStr });
         }
     }
 </script>
